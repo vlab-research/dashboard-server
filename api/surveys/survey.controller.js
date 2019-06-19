@@ -8,15 +8,15 @@ const { TypeformUtil } = require('../../utils');
 exports.postOne = async (req, res) => {
   try {
     const { formid, title } = req.body;
-    const { email:userid } = req.user;
-  
-    const user = await User.user({email: userid});
+    const { email: userid } = req.user;
+
+    const user = await User.user({ email: userid });
     if (!user[0]) return res.status(401).send();
 
     const form = await TypeformUtil.TypeformForm(user[0].token, formid);
     const shortcode = await SurveyUtil.shortcode(userid);
-    const survey = {formid, title, userid, form, shortcode};
-    
+    const survey = { formid, title, userid, form, shortcode };
+
     SurveyUtil.validate(survey);
     const createdSurvey = await Survey.create(survey);
 
@@ -29,10 +29,10 @@ exports.postOne = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const { email:userid } = req.user;
+    const { email: userid } = req.user;
     if (!userid) return res.status(401).send();
 
-    const surveys = await Survey.retrieve({userid});
+    const surveys = await Survey.retrieve({ userid });
     res.status(201).send(surveys);
   } catch (err) {
     console.error(err);
