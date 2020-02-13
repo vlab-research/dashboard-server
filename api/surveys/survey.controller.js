@@ -85,3 +85,24 @@ exports.getAll = async (req, res) => {
     res.status(500).send(err);
   }
 };
+
+exports.deleteOne = async (req, res) => {
+  try {
+    const { email } = req.user;
+    const { surveyid } = req.params;
+
+    if (!email || !surveyid) {
+      return res.status(404).send('No user, no id, no deletion!');
+    }
+
+    const survey = await Survey.markDeleted({ email, surveid });
+    if (!survey) {
+      return res.status(404).send('Could not find a survey with that id and that user')
+    }
+
+    res.status(200).send(survey);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send(err);
+  }
+}

@@ -35,11 +35,20 @@ async function retrieveByPage({ pageid, code, timestamp }) {
 async function retrieve({ email }) {
   const RETRIEVE_ALL = `SELECT surveys.* FROM surveys
                         LEFT JOIN users on surveys.userid = users.id
-                        WHERE email=$1
+                        WHERE email=$1 AND deleted=false
                         ORDER BY created DESC`;
   const values = [email];
   const { rows } = await this.query(RETRIEVE_ALL, values);
   return rows;
+}
+
+async function markDeleted({ email, surveyid }) {
+  const MARK_DELETED = `UPDATE surveys SET (deleted) = (true)
+                        FROM surveys as s LEFT JOIN users ON s.userid = users.id
+                        WHERE users.email=$1 AND surveys.id = $2 RETURNING surveys.id`;
+
+  const { rows } = await this.query(MARK_DELETED, [email, surveyid])
+  return rows[0];
 }
 
 module.exports = {
@@ -48,5 +57,6 @@ module.exports = {
     create: create.bind(pool),
     retrieve: retrieve.bind(pool),
     retrieveByPage: retrieveByPage.bind(pool),
+    markDeleted: markDeleted.bind(pool),
   }),
 };

@@ -10,6 +10,16 @@ const userModel = require('../users/user.queries');
 
 const { DATABASE_CONFIG } = require('../../config');
 
+const user = {
+  token: 'HxpnYoykme73Jz1c9DdAxPws77GzH9jLqE1wu1piSqJj',
+  email: 'test@vlab.com',
+};
+
+const user2 = {
+  token: 'dasfYoykme73Jz1c93d1xPws77GzuhNU0f1wu1pHeh91',
+  email: 'test2@vlab.com',
+};
+
 describe('Survey queries', () => {
   let Survey;
   let User;
@@ -54,7 +64,8 @@ describe('Survey queries', () => {
        messages VARCHAR,
        shortcode INT4 NOT NULL,
        title VARCHAR NOT NULL,
-       userid UUID NOT NULL REFERENCES chatroach.users(id) ON DELETE CASCADE
+       userid UUID NOT NULL REFERENCES chatroach.users(id) ON DELETE CASCADE,
+       deleted BOOLEAN NOT NULL DEFAULT false
       )`,
     );
 
@@ -75,10 +86,7 @@ describe('Survey queries', () => {
 
   describe('.create()', () => {
     it('should insert a new survey and return the newly created record', async () => {
-      const user = {
-        token: 'HxpnYoykme73Jz1c9DdAxPws77GzH9jLqE1wu1piSqJj',
-        email: 'test@vlab.com',
-      };
+
       const newUser = await User.create(user);
 
       newUser.token.should.equal(user.token);
@@ -102,12 +110,8 @@ describe('Survey queries', () => {
     });
   });
 
-  describe('.retrieve()', () => {
+  describe('.retrieve() and .created() and .markDeleted() functional', () => {
     it('should insert a new survey and return the newly created record', async () => {
-      const user2 = {
-        token: 'dasfYoykme73Jz1c93d1xPws77GzuhNU0f1wu1pHeh91',
-        email: 'test2@vlab.com',
-      };
       const newUser = await User.create(user2);
 
       const survey = {
@@ -119,7 +123,7 @@ describe('Survey queries', () => {
         userid: newUser.id,
         title: 'Second Survey',
       };
-      await Survey.create(survey);
+      const {id:surveyId} = await Survey.create(survey);
 
       const survey2 = {
         created: new Date(),
@@ -130,10 +134,48 @@ describe('Survey queries', () => {
         userid: newUser.id,
         title: 'Other survey',
       };
-      await Survey.create(survey2);
+
+      const {id:survey2Id} = await Survey.create(survey2);
 
       const rows = await Survey.retrieve({ email: 'test2@vlab.com' });
       rows.length.should.be.equal(2);
+
+      const deleted = await Survey.markDeleted({ email: 'test2@vlab.com', surveyid: survey2Id });
+      deleted.id.should.equal(survey2Id);
+
+      const rowsLater = await Survey.retrieve({ email: 'test2@vlab.com' });
+      rowsLater.length.should.be.equal(1);
+    });
+
+    it('should not allow users to delete others surveys', async () => {
+      const newUser = await User.create(user);
+      const newUser2 = await User.create(user2);
+
+      const survey = {
+        created: new Date(),
+        formid: 'biy23',
+        form: '{"form": "form detail"}',
+        messages: '{"foo": "bar"}',
+        shortcode: 231,
+        userid: newUser.id,
+        title: 'Second Survey',
+      };
+      const {id:surveyId} = await Survey.create(survey);
+      const survey2 = {
+        created: new Date(),
+        formid: '3hu23',
+        form: '{"form": "form detail"}',
+        messages: '{"foo": "bar"}',
+        shortcode: 123,
+        userid: newUser.id,
+        title: 'Other survey',
+      };
+      const {id:survey2Id} = await Survey.create(survey2);
+
+      const deleted = await Survey.markDeleted({ email: 'test2@vlab.com', surveyid: survey2Id });
+      (deleted === undefined).should.be.true
+      const rowsLater = await Survey.retrieve({ email: 'test@vlab.com' });
+      rowsLater.length.should.be.equal(2);
     });
   });
 
